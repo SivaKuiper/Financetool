@@ -1183,7 +1183,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 if (status === 'received') statusBadge = '<span class="status-badge status-received">Received</span>';
                 else if (status === 'partial') statusBadge = '<span class="status-badge status-partial">Partial</span>';
                 else if (status === 'overdue') statusBadge = '<span class="status-badge status-overdue">Overdue</span>';
-                else statusBadge = '<span class="status-badge status-pending">Pending</span>';
+                else statusBadge = '<span class="status-badge status-pending">Not Due</span>';
 
                 const notesIcon = inv.notes ? `<span title="${(inv.notes || '').replace(/"/g, '&quot;')}" style="cursor: help; font-size: 1.2em;">📝</span>` : '-';
 
@@ -1882,145 +1882,176 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
         // Generate customer statement
         function generateCustomerStatement() {
             const customer = document.getElementById('customerSelect').value;
-            if (!customer) {
-                alert('Please select a customer!');
-                return;
-            }
+            if (!customer) { alert('Please select a customer!'); return; }
 
-            const customerInvoices = invoices.filter(inv => inv.customerName === customer).sort((a, b) => new Date(a.etaDate) - new Date(b.etaDate));
-            const totalInvoiced = customerInvoices.reduce((sum, inv) => sum + inv.invoiceAmountUSD, 0);
-            const totalReceived = customerInvoices.reduce((sum, inv) => sum + inv.receivedAmountUSD, 0);
-            const totalPending = customerInvoices.reduce((sum, inv) => sum + inv.pendingAmountUSD, 0);
+            const customerInvoices = invoices.filter(inv => inv.customerName === customer)
+                .sort((a, b) => new Date(a.etaDate) - new Date(b.etaDate));
+            const totalInvoiced  = customerInvoices.reduce((s, i) => s + i.invoiceAmountUSD, 0);
+            const totalReceived  = customerInvoices.reduce((s, i) => s + i.receivedAmountUSD, 0);
+            const totalPending   = customerInvoices.reduce((s, i) => s + i.pendingAmountUSD, 0);
+            const country        = customerInvoices[0]?.country || '';
+            const today          = new Date().toLocaleDateString('en-GB');
+            const compName       = config.companyName  || 'KUIPER EXPORTS & IMPORTS PVT LTD';
+            const compAddr       = config.companyAddress || 'Ongole, Andhra Pradesh, India';
+            const compEmail      = config.companyEmail || '';
 
-            const country = customerInvoices[0]?.country || '';
-            const today = new Date().toLocaleDateString('en-GB');
+            // Row background colour palette — cycles through soft colours per invoice
+            const palette = ['#ffffff','#f0f4ff','#fff8f0','#f0fff4','#fff0f8','#f5f0ff','#fffbf0','#f0fbff'];
 
-            // Build table rows
-            let tableRows = '';
+            let rows = '';
             customerInvoices.forEach((inv, i) => {
                 const status = getInvoiceStatus(inv);
-                let statusText = '';
-                let statusColor = '#17a2b8';
-                let bgColor = i % 2 === 0 ? '#ffffff' : '#fafafa';
-                
-                if (status === 'received') { 
-                    statusColor = '#28a745'; 
-                    statusText = 'Paid'; 
-                } else if (status === 'overdue') { 
-                    statusColor = '#dc3545'; 
-                    statusText = 'Overdue';
-                    bgColor = '#fff5f5'; 
-                } else if (status === 'partial') { 
-                    statusColor = '#ffc107'; 
-                    statusText = 'Partial';
-                } else { 
-                    statusText = 'Pending'; 
-                }
+                let statusText, statusColor, rowBg;
+                rowBg = palette[i % palette.length];
+                if (status === 'received') { statusText = 'Paid';    statusColor = '#28a745'; rowBg = '#f0fff4'; }
+                else if (status === 'overdue')  { statusText = 'Overdue';  statusColor = '#dc3545'; rowBg = '#fff5f5'; }
+                else if (status === 'partial')  { statusText = 'Partial';  statusColor = '#e67e00'; }
+                else                            { statusText = 'Not Due';  statusColor = '#17a2b8'; }
 
-                const notes = (inv.notes || '').substring(0, 40);
-                const notesDisplay = notes ? (notes.length >= 40 ? notes + '...' : notes) : '-';
+                const notesText = (inv.notes || '-').substring(0, 45);
+                const notes     = notesText.length === 45 ? notesText + '…' : notesText;
+                const container = inv.containerNo || '';
 
-                tableRows += '<' + 'tr style="background: ' + bgColor + ';">' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt;">' + inv.invoiceNumber + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt; text-align: center;">' + formatDate(inv.etaDate) + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt; text-align: right;">' + formatCurrency(inv.invoiceAmountUSD) + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt; text-align: right; color: #28a745;">' + formatCurrency(inv.receivedAmountUSD) + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt; text-align: right; font-weight: 600; color: ' + (inv.pendingAmountUSD > 0 ? '#dc3545' : '#28a745') + ';">' + formatCurrency(inv.pendingAmountUSD) + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt; text-align: center;">' + formatDate(inv.dueDate) + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 7pt; text-align: center; color: ' + statusColor + '; font-weight: 600;">' + statusText + '<' + '/td>' +
-                    '<' + 'td style="padding: 3px 2px; border: 1px solid #dee2e6; font-size: 6pt; word-wrap: break-word; max-width: 80px; overflow: hidden;">' + notesDisplay + '<' + '/td>' +
-                '<' + '/tr>';
+                rows +=
+                    '<tr style="background:' + rowBg + ';border-bottom:1px solid #dee2e6;">' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;font-weight:600;">' + inv.invoiceNumber + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;">' + formatDate(inv.etaDate) + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;text-align:right;">' + formatCurrency(inv.invoiceAmountUSD) + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;text-align:right;color:#28a745;">' + formatCurrency(inv.receivedAmountUSD) + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;text-align:right;font-weight:700;color:' + (inv.pendingAmountUSD > 0 ? '#dc3545' : '#28a745') + ';">' + formatCurrency(inv.pendingAmountUSD) + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;">' + formatDate(inv.dueDate) + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;font-weight:700;color:' + statusColor + ';text-align:center;">' + statusText + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;">' + container + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:6.5pt;color:#555;">' + notes + '</td>' +
+                    '</tr>';
             });
 
-            const compName = config.companyName || 'KUIPER EXPORTS & IMPORTS PVT LTD';
-            const compAddr = config.companyAddress || 'Ongole, Andhra Pradesh, India';
-            const compEmail = config.companyEmail || '';
+            const printHtml =
+                '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+                '<title>Statement - ' + customer + '</title>' +
+                '<style>' +
+                    'body{font-family:Arial,sans-serif;margin:0;padding:0;}' +
+                    '@page{size:A4 portrait;margin:10mm 8mm;}' +
+                    'table{border-collapse:collapse;width:100%;}' +
+                    '.no-print{display:none;}' +
+                '</style></head><body>' +
 
-            let html = '<' + 'style>' +
-                '@media print {' +
-                    '@page { size: A4 portrait; margin: 8mm; }' +
-                    'body * { visibility: hidden; }' +
-                    '#customerStatementModal, #customerStatementModal * { visibility: visible; }' +
-                    '#customerStatementModal { position: fixed; left: 0; top: 0; width: 100%; }' +
-                    '.no-print { display: none !important; }' +
-                '}' +
-            '<' + '/style>' +
-            '<' + 'div style="max-width: 190mm; margin: 0 auto; padding: 10px; font-family: Arial, sans-serif;">' +
-                '<' + 'div style="text-align: center; margin-bottom: 15px; border-bottom: 3px solid #2a5298; padding-bottom: 10px;">' +
-                    '<' + 'h1 style="color: #2a5298; font-size: 1.5em; margin: 0 0 5px 0;">' + compName + '<' + '/h1>' +
-                    '<' + 'p style="font-size: 0.8em; color: #6c757d; margin: 2px 0;">' + compAddr + '<' + '/p>' +
-                    (compEmail ? '<' + 'p style="font-size: 0.75em; color: #6c757d; margin: 2px 0;">' + compEmail + '<' + '/p>' : '') +
-                    '<' + 'div style="margin-top: 8px; background: #2a5298; color: white; padding: 6px; font-size: 1em; font-weight: 600;">STATEMENT OF ACCOUNT<' + '/div>' +
-                '<' + '/div>' +
-                
-                '<' + 'table style="width: 100%; margin-bottom: 12px; font-size: 0.85em;">' +
-                    '<' + 'tr>' +
-                        '<' + 'td style="width: 60%;">' +
-                            '<' + 'strong style="color: #2a5298;">TO:<' + '/strong><' + 'br>' +
-                            '<' + 'strong style="font-size: 1.1em;">' + customer + '<' + '/strong><' + 'br>' +
-                            (country ? country : '') +
-                        '<' + '/td>' +
-                        '<' + 'td style="text-align: right;">' +
-                            '<' + 'strong>Date:<' + '/strong> ' + today + '<' + 'br>' +
-                            '<' + 'strong>Currency:<' + '/strong> USD<' + 'br>' +
-                            '<' + 'strong>Invoices:<' + '/strong> ' + customerInvoices.length +
-                        '<' + '/td>' +
-                    '<' + '/tr>' +
-                '<' + '/table>' +
-                
-                '<' + 'table style="width: 100%; border: 2px solid #dee2e6; margin-bottom: 12px; font-size: 0.9em;">' +
-                    '<' + 'tr style="border-bottom: 1px solid #dee2e6;">' +
-                        '<' + 'td style="padding: 6px;"><' + 'strong>Total Invoiced:<' + '/strong><' + '/td>' +
-                        '<' + 'td style="padding: 6px; text-align: right; font-weight: 600;">' + formatCurrency(totalInvoiced) + '<' + '/td>' +
-                    '<' + '/tr>' +
-                    '<' + 'tr style="border-bottom: 1px solid #dee2e6;">' +
-                        '<' + 'td style="padding: 6px;"><' + 'strong>Amount Received:<' + '/strong><' + '/td>' +
-                        '<' + 'td style="padding: 6px; text-align: right; color: #28a745; font-weight: 600;">' + formatCurrency(totalReceived) + '<' + '/td>' +
-                    '<' + '/tr>' +
-                    '<' + 'tr style="background: ' + (totalPending > 0 ? '#fff5f5' : '#f0fff4') + ';">' +
-                        '<' + 'td style="padding: 8px;"><' + 'strong style="font-size: 1.1em;">BALANCE DUE:<' + '/strong><' + '/td>' +
-                        '<' + 'td style="padding: 8px; text-align: right; font-size: 1.2em; font-weight: 700; color: ' + (totalPending > 0 ? '#dc3545' : '#28a745') + ';">' + formatCurrency(totalPending) + '<' + '/td>' +
-                    '<' + '/tr>' +
-                '<' + '/table>' +
-                
-                '<' + 'table style="width: 100%; border-collapse: collapse; border: 2px solid #2a5298; margin-bottom: 12px;">' +
-                    '<' + 'thead>' +
-                        '<' + 'tr style="background: #2a5298; color: white;">' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 11%;">Invoice<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 8%;">Date<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 12%; text-align: right;">Amount<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 11%; text-align: right;">Received<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 12%; text-align: right;">Balance<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 8%;">Due<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 10%;">Status<' + '/th>' +
-                            '<' + 'th style="padding: 4px 2px; border: 1px solid #1e3c72; font-size: 7pt; width: 28%;">Notes<' + '/th>' +
-                        '<' + '/tr>' +
-                    '<' + '/thead>' +
-                    '<' + 'tbody>' +
-                        tableRows +
-                        '<' + 'tr style="background: #f8f9fa; border-top: 3px solid #2a5298;">' +
-                            '<' + 'td colspan="2" style="padding: 5px 2px; border: 1px solid #dee2e6; font-weight: 700; font-size: 7pt;">TOTAL<' + '/td>' +
-                            '<' + 'td style="padding: 5px 2px; border: 1px solid #dee2e6; text-align: right; font-weight: 700; font-size: 7pt;">' + formatCurrency(totalInvoiced) + '<' + '/td>' +
-                            '<' + 'td style="padding: 5px 2px; border: 1px solid #dee2e6; text-align: right; font-weight: 700; color: #28a745; font-size: 7pt;">' + formatCurrency(totalReceived) + '<' + '/td>' +
-                            '<' + 'td style="padding: 5px 2px; border: 1px solid #dee2e6; text-align: right; font-weight: 700; color: ' + (totalPending > 0 ? '#dc3545' : '#28a745') + '; font-size: 7pt;">' + formatCurrency(totalPending) + '<' + '/td>' +
-                            '<' + 'td colspan="3" style="border: 1px solid #dee2e6;"><' + '/td>' +
-                        '<' + '/tr>' +
-                    '<' + '/tbody>' +
-                '<' + '/table>' +
-                
-                '<' + 'div style="margin-top: 15px; padding-top: 12px; border-top: 2px solid #dee2e6; text-align: center; color: #6c757d; font-size: 0.75em;">' +
-                    '<' + 'p><' + 'strong>Payment Terms:<' + '/strong> Please remit within due dates.<' + '/p>' +
-                    (compEmail ? '<' + 'p style="margin-top: 6px;">Contact: ' + compEmail + '<' + '/p>' : '') +
-                    '<' + 'p style="margin-top: 6px; font-style: italic;">Computer-generated, no signature required.<' + '/p>' +
-                '<' + '/div>' +
-            '<' + '/div>' +
-            '<' + 'div style="margin-top: 15px; text-align: center; padding: 12px; background: #f8f9fa;" class="no-print">' +
-                '<' + 'button class="btn btn-success" onclick="window.print()" style="margin: 3px;">Print<' + '/button>' +
-                '<' + 'button class="btn btn-primary" onclick="window.print()" style="margin: 3px;">Save PDF<' + '/button>' +
-                '<' + 'button class="btn btn-danger" onclick="closeCustomerStatementModal()" style="margin: 3px;">Close<' + '/button>' +
-            '<' + '/div>';
+                '<div style="text-align:center;border-bottom:3px solid #2a5298;padding-bottom:10px;margin-bottom:12px;">' +
+                    '<h1 style="color:#2a5298;font-size:16pt;margin:0 0 4px 0;">' + compName + '</h1>' +
+                    '<p style="font-size:9pt;color:#666;margin:2px 0;">' + compAddr + '</p>' +
+                    (compEmail ? '<p style="font-size:8pt;color:#666;margin:2px 0;">' + compEmail + '</p>' : '') +
+                    '<div style="margin-top:8px;background:#2a5298;color:white;padding:6px 0;font-size:11pt;font-weight:bold;letter-spacing:1px;">STATEMENT OF ACCOUNT</div>' +
+                '</div>' +
 
-            document.getElementById('customerStatementContent').innerHTML = html;
+                '<table style="margin-bottom:10px;font-size:9pt;">' +
+                    '<tr>' +
+                        '<td style="width:60%;vertical-align:top;">' +
+                            '<strong style="color:#2a5298;">TO:</strong><br>' +
+                            '<strong style="font-size:11pt;">' + customer + '</strong><br>' +
+                            '<span style="color:#555;">' + country + '</span>' +
+                        '</td>' +
+                        '<td style="text-align:right;vertical-align:top;">' +
+                            '<strong>Date:</strong> ' + today + '<br>' +
+                            '<strong>Currency:</strong> USD<br>' +
+                            '<strong>Invoices:</strong> ' + customerInvoices.length +
+                        '</td>' +
+                    '</tr>' +
+                '</table>' +
+
+                '<table style="border:2px solid #dee2e6;margin-bottom:10px;font-size:9pt;">' +
+                    '<tr style="border-bottom:1px solid #dee2e6;">' +
+                        '<td style="padding:5px 8px;"><strong>Total Invoiced:</strong></td>' +
+                        '<td style="padding:5px 8px;text-align:right;font-weight:600;">' + formatCurrency(totalInvoiced) + '</td>' +
+                    '</tr>' +
+                    '<tr style="border-bottom:1px solid #dee2e6;">' +
+                        '<td style="padding:5px 8px;"><strong>Amount Received:</strong></td>' +
+                        '<td style="padding:5px 8px;text-align:right;color:#28a745;font-weight:600;">' + formatCurrency(totalReceived) + '</td>' +
+                    '</tr>' +
+                    '<tr style="background:' + (totalPending > 0 ? '#fff5f5' : '#f0fff4') + ';">' +
+                        '<td style="padding:7px 8px;font-size:11pt;"><strong>BALANCE DUE:</strong></td>' +
+                        '<td style="padding:7px 8px;text-align:right;font-size:13pt;font-weight:700;color:' + (totalPending > 0 ? '#dc3545' : '#28a745') + ';">' + formatCurrency(totalPending) + '</td>' +
+                    '</tr>' +
+                '</table>' +
+
+                '<table style="border:2px solid #2a5298;font-size:7.5pt;table-layout:fixed;">' +
+                    '<thead>' +
+                        '<tr style="background:#2a5298;color:white;">' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;">Invoice</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:8%;">Date</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;text-align:right;">Amount</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;text-align:right;">Received</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;text-align:right;">Balance</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:8%;">Due Date</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:10%;text-align:center;">Status</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:13%;">Container</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:17%;">Notes</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>' +
+                        rows +
+                        '<tr style="background:#f8f9fa;border-top:3px solid #2a5298;">' +
+                            '<td colspan="2" style="padding:5px 3px;border:1px solid #ddd;font-weight:700;font-size:7.5pt;">TOTAL</td>' +
+                            '<td style="padding:5px 3px;border:1px solid #ddd;text-align:right;font-weight:700;font-size:7.5pt;">' + formatCurrency(totalInvoiced) + '</td>' +
+                            '<td style="padding:5px 3px;border:1px solid #ddd;text-align:right;font-weight:700;color:#28a745;font-size:7.5pt;">' + formatCurrency(totalReceived) + '</td>' +
+                            '<td style="padding:5px 3px;border:1px solid #ddd;text-align:right;font-weight:700;color:' + (totalPending > 0 ? '#dc3545' : '#28a745') + ';font-size:7.5pt;">' + formatCurrency(totalPending) + '</td>' +
+                            '<td colspan="4" style="border:1px solid #ddd;"></td>' +
+                        '</tr>' +
+                    '</tbody>' +
+                '</table>' +
+
+                '<div style="margin-top:15px;padding-top:10px;border-top:2px solid #dee2e6;text-align:center;color:#888;font-size:8pt;">' +
+                    '<p><strong>Payment Terms:</strong> Please remit payment within due dates.</p>' +
+                    (compEmail ? '<p style="margin-top:4px;">Queries: ' + compEmail + '</p>' : '') +
+                    '<p style="margin-top:4px;font-style:italic;">Computer-generated statement — no signature required.</p>' +
+                '</div>' +
+                '</body></html>';
+
+            // Preview in modal (screen only)
+            const previewDiv = document.getElementById('customerStatementContent');
+            previewDiv.innerHTML =
+                '<div style="background:#f0f4ff;border:2px dashed #2a5298;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px;">' +
+                    '<p style="margin:0;font-size:0.95em;color:#2a5298;"><strong>✅ Statement ready for ' + customer + '</strong></p>' +
+                    '<p style="margin:5px 0 0 0;font-size:0.85em;color:#555;">Click PRINT/PDF to open the print-ready A4 portrait version in a new window.</p>' +
+                '</div>' +
+                '<table style="width:100%;border-collapse:collapse;border:2px solid #2a5298;font-size:8.5pt;">' +
+                    '<thead><tr style="background:#2a5298;color:white;">' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;">Invoice</th>' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;">Date</th>' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;text-align:right;">Amount</th>' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;text-align:right;">Received</th>' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;text-align:right;">Balance</th>' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;">Status</th>' +
+                    '</tr></thead><tbody>' +
+                    customerInvoices.map((inv, i) => {
+                        const st = getInvoiceStatus(inv);
+                        let sc = '#17a2b8', stxt = 'Not Due';
+                        if (st === 'received') { sc = '#28a745'; stxt = 'Paid'; }
+                        else if (st === 'overdue') { sc = '#dc3545'; stxt = 'Overdue'; }
+                        else if (st === 'partial') { sc = '#e67e00'; stxt = 'Partial'; }
+                        return '<tr style="background:' + palette[i % palette.length] + ';">' +
+                            '<td style="padding:4px;border:1px solid #ddd;font-weight:600;">' + inv.invoiceNumber + '</td>' +
+                            '<td style="padding:4px;border:1px solid #ddd;">' + formatDate(inv.etaDate) + '</td>' +
+                            '<td style="padding:4px;border:1px solid #ddd;text-align:right;">' + formatCurrency(inv.invoiceAmountUSD) + '</td>' +
+                            '<td style="padding:4px;border:1px solid #ddd;text-align:right;color:#28a745;">' + formatCurrency(inv.receivedAmountUSD) + '</td>' +
+                            '<td style="padding:4px;border:1px solid #ddd;text-align:right;color:' + (inv.pendingAmountUSD > 0 ? '#dc3545' : '#28a745') + ';font-weight:700;">' + formatCurrency(inv.pendingAmountUSD) + '</td>' +
+                            '<td style="padding:4px;border:1px solid #ddd;color:' + sc + ';font-weight:600;text-align:center;">' + stxt + '</td>' +
+                        '</tr>';
+                    }).join('') +
+                    '</tbody></table>' +
+                '<div style="margin-top:12px;text-align:center;">' +
+                    '<button class="btn btn-success" onclick="openStatementPrint()" style="margin:4px;padding:10px 25px;">🖨️ Print / Save PDF</button>' +
+                    '<button class="btn btn-danger" onclick="closeCustomerStatementModal()" style="margin:4px;padding:10px 25px;">✕ Close</button>' +
+                '</div>';
+
+            window._statementPrintHtml = printHtml;
+        }
+
+        function openStatementPrint() {
+            const w = window.open('', '_blank', 'width=900,height=700');
+            w.document.write(window._statementPrintHtml);
+            w.document.close();
+            w.focus();
+            setTimeout(() => w.print(), 600);
         }
 
         // Close customer statement modal
