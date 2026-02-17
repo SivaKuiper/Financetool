@@ -1413,49 +1413,42 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             modal.id = 'paymentModal';
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;';
             modal.innerHTML = `
-                <div style="background:white;border-radius:16px;padding:30px;width:520px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                <div style="background:white;border-radius:16px;padding:25px;width:500px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);box-sizing:border-box;overflow:hidden;">
                     <h3 style="margin:0 0 5px 0;color:#2a5298;">💰 Record Payment</h3>
-                    <p style="margin:0 0 20px 0;color:#666;font-size:0.9em;">${invoice.invoiceNumber} — ${invoice.customerName}</p>
+                    <p style="margin:0 0 15px 0;color:#666;font-size:0.9em;">${invoice.invoiceNumber} — ${invoice.customerName}</p>
 
-                    <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:20px;font-size:0.9em;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <div style="background:#f8f9fa;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:0.88em;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
                             <span>Invoice Amount:</span><strong>${formatCurrency(invoice.invoiceAmountUSD)}</strong>
                         </div>
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
                             <span>Already Received:</span><strong style="color:#28a745;">${formatCurrency(invoice.receivedAmountUSD)}</strong>
                         </div>
-                        <div style="display:flex;justify-content:space-between;border-top:1px solid #dee2e6;padding-top:6px;">
+                        <div style="display:flex;justify-content:space-between;border-top:1px solid #dee2e6;padding-top:5px;">
                             <span><strong>Balance Pending:</strong></span><strong style="color:#dc3545;">${formatCurrency(invoice.pendingAmountUSD)}</strong>
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                    <div style="background:#fff8e1;border-left:4px solid #ffc107;padding:8px 12px;border-radius:6px;margin-bottom:14px;font-size:0.8em;color:#555;">
+                        💡 <strong>Bank Charges & Discount</strong> are written off — they <em>close</em> the invoice without being received as cash.
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                         <div>
-                            <label style="font-size:0.85em;font-weight:600;display:block;margin-bottom:4px;">Payment Date *</label>
-                            <input type="date" id="pmtDate" value="${today}" style="width:100%;padding:8px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;">
+                            <label style="font-size:0.82em;font-weight:600;display:block;margin-bottom:3px;">Payment Date *</label>
+                            <input type="date" id="pmtDate" value="${today}" style="width:100%;padding:7px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;font-size:0.9em;">
                         </div>
                         <div>
-                            <label style="font-size:0.85em;font-weight:600;display:block;margin-bottom:4px;">Amount Received (USD) *</label>
-                            <input type="number" id="pmtAmount" step="0.01" placeholder="0.00" style="width:100%;padding:8px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;">
+                            <label style="font-size:0.82em;font-weight:600;display:block;margin-bottom:3px;">Amount Received (USD) *</label>
+                            <input type="number" id="pmtAmount" step="0.01" placeholder="0.00" style="width:100%;padding:7px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;font-size:0.9em;">
                         </div>
                         <div>
-                            <label style="font-size:0.85em;font-weight:600;display:block;margin-bottom:4px;">Exchange Rate (₹/$) *</label>
-                            <input type="number" id="pmtExRate" step="0.01" value="${config.exchangeRate}" style="width:100%;padding:8px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;">
-                            <span style="font-size:0.75em;color:#888;">Actual rate on payment date</span>
+                            <label style="font-size:0.82em;font-weight:600;display:block;margin-bottom:3px;">Exchange Rate (₹/$)</label>
+                            <input type="number" id="pmtExRate" step="0.01" value="${config.exchangeRate}" style="width:100%;padding:7px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;font-size:0.9em;">
                         </div>
                         <div>
-                            <label style="font-size:0.85em;font-weight:600;display:block;margin-bottom:4px;">Bank Charges (USD)</label>
-                            <input type="number" id="pmtBankCharges" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:8px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;">
-                            <span style="font-size:0.75em;color:#888;">Deducted by bank (SWIFT etc.)</span>
-                        </div>
-                        <div>
-                            <label style="font-size:0.85em;font-weight:600;display:block;margin-bottom:4px;">Discount Applied (USD)</label>
-                            <input type="number" id="pmtDiscount" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:8px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;">
-                            <span style="font-size:0.75em;color:#888;">Commercial discount agreed</span>
-                        </div>
-                        <div>
-                            <label style="font-size:0.85em;font-weight:600;display:block;margin-bottom:4px;">Payment Type</label>
-                            <select id="pmtType" style="width:100%;padding:8px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;">
+                            <label style="font-size:0.82em;font-weight:600;display:block;margin-bottom:3px;">Payment Type</label>
+                            <select id="pmtType" style="width:100%;padding:7px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;font-size:0.9em;">
                                 <option value="TT">TT (Wire Transfer)</option>
                                 <option value="Advance">Advance Payment</option>
                                 <option value="LC">LC Payment</option>
@@ -1463,9 +1456,19 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                                 <option value="Final">Final Settlement</option>
                             </select>
                         </div>
+                        <div>
+                            <label style="font-size:0.82em;font-weight:600;display:block;margin-bottom:3px;">Bank Charges Write-off (USD)</label>
+                            <input type="number" id="pmtBankCharges" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:7px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;font-size:0.9em;">
+                            <span style="font-size:0.72em;color:#888;">Deducted by bank — written off</span>
+                        </div>
+                        <div>
+                            <label style="font-size:0.82em;font-weight:600;display:block;margin-bottom:3px;">Discount Write-off (USD)</label>
+                            <input type="number" id="pmtDiscount" step="0.01" value="0" placeholder="0.00" style="width:100%;padding:7px;border:2px solid #dee2e6;border-radius:8px;box-sizing:border-box;font-size:0.9em;">
+                            <span style="font-size:0.72em;color:#888;">Commercial discount — written off</span>
+                        </div>
                     </div>
 
-                    <div id="pmtSummary" style="background:#e7f3ff;padding:10px;border-radius:8px;margin-bottom:15px;font-size:0.85em;display:none;"></div>
+                    <div id="pmtSummary" style="padding:10px 12px;border-radius:8px;margin-bottom:12px;display:none;border-left:4px solid #2a5298;"></div>
 
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
                         <button class="btn btn-danger" onclick="document.getElementById('paymentModal').remove()">Cancel</button>
@@ -1475,28 +1478,37 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             `;
             document.body.appendChild(modal);
 
-            // Live summary update
+            // Live summary
             ['pmtAmount','pmtExRate','pmtBankCharges','pmtDiscount'].forEach(fid => {
                 document.getElementById(fid).addEventListener('input', updatePaymentSummary);
             });
+
             function updatePaymentSummary() {
-                const amt      = parseFloat(document.getElementById('pmtAmount').value) || 0;
-                const exRate   = parseFloat(document.getElementById('pmtExRate').value) || config.exchangeRate;
-                const charges  = parseFloat(document.getElementById('pmtBankCharges').value) || 0;
-                const discount = parseFloat(document.getElementById('pmtDiscount').value) || 0;
-                const netUSD   = amt - charges - discount;
-                const inrVal   = amt * exRate;
-                const pending  = invoice.pendingAmountUSD - netUSD;
-                const sumEl    = document.getElementById('pmtSummary');
+                const received  = parseFloat(document.getElementById('pmtAmount').value) || 0;
+                const exRate    = parseFloat(document.getElementById('pmtExRate').value) || config.exchangeRate;
+                const charges   = parseFloat(document.getElementById('pmtBankCharges').value) || 0;
+                const discount  = parseFloat(document.getElementById('pmtDiscount').value) || 0;
+
+                const totalClosing = Math.round((received + charges + discount) * 100) / 100;
+                const pending      = Math.round(invoice.pendingAmountUSD * 100) / 100;
+                const remaining    = Math.round((pending - totalClosing) * 100) / 100;
+                const inrVal       = Math.round(received * exRate);
+                const willClose    = remaining <= 0;
+
+                const sumEl = document.getElementById('pmtSummary');
                 sumEl.style.display = 'block';
-                sumEl.innerHTML =
-                    '<strong>Payment Summary:</strong><br>' +
-                    'Received: <strong>' + formatCurrency(amt) + '</strong> × ₹' + exRate + ' = <strong>' + formatCurrency(inrVal, 'INR') + '</strong><br>' +
-                    (charges > 0 ? 'Bank Charges: <span style="color:#dc3545;">-' + formatCurrency(charges) + '</span><br>' : '') +
-                    (discount > 0 ? 'Discount: <span style="color:#e67e00;">-' + formatCurrency(discount) + '</span><br>' : '') +
-                    'Net credited to invoice: <strong>' + formatCurrency(netUSD) + '</strong><br>' +
-                    'Remaining balance after payment: <strong style="color:' + (pending <= 0 ? '#28a745' : '#dc3545') + ';">' + formatCurrency(Math.max(0, pending)) + '</strong>' +
-                    (pending <= 0 ? ' ✅ <strong>Invoice will be CLOSED</strong>' : '');
+                sumEl.style.background = willClose ? '#d4edda' : '#e7f3ff';
+                sumEl.style.borderLeft = '4px solid ' + (willClose ? '#28a745' : '#2a5298');
+
+                let html = '<div style="font-size:0.82em;line-height:1.8;">';
+                html += '<div style="display:flex;justify-content:space-between;"><span>Cash received:</span><strong>' + formatCurrency(received) + ' × ₹' + exRate + ' = ' + formatCurrency(inrVal,'INR') + '</strong></div>';
+                if (charges > 0) html += '<div style="display:flex;justify-content:space-between;"><span>Bank charges w/o:</span><span style="color:#e67e00;font-weight:600;">+ ' + formatCurrency(charges) + '</span></div>';
+                if (discount > 0) html += '<div style="display:flex;justify-content:space-between;"><span>Discount w/o:</span><span style="color:#e67e00;font-weight:600;">+ ' + formatCurrency(discount) + '</span></div>';
+                html += '<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;padding-top:4px;margin-top:2px;"><span><strong>Total closing:</strong></span><strong>' + formatCurrency(totalClosing) + '</strong></div>';
+                html += '<div style="display:flex;justify-content:space-between;"><span><strong>Remaining:</strong></span><strong style="color:' + (willClose ? '#28a745' : '#dc3545') + ';">' + formatCurrency(Math.max(0, remaining)) + '</strong></div>';
+                if (willClose) html += '<div style="margin-top:6px;text-align:center;background:#28a745;color:white;padding:5px;border-radius:6px;font-weight:700;font-size:1em;">✅ INVOICE WILL BE CLOSED</div>';
+                html += '</div>';
+                sumEl.innerHTML = html;
             }
         }
 
@@ -1504,31 +1516,37 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             const invoice = invoices.find(inv => inv.id === id);
             if (!invoice) return;
 
-            const pmtDate    = document.getElementById('pmtDate').value;
-            const amount     = parseFloat(document.getElementById('pmtAmount').value) || 0;
-            const exRate     = parseFloat(document.getElementById('pmtExRate').value) || config.exchangeRate;
-            const charges    = parseFloat(document.getElementById('pmtBankCharges').value) || 0;
-            const discount   = parseFloat(document.getElementById('pmtDiscount').value) || 0;
-            const pmtType    = document.getElementById('pmtType').value;
-            const netUSD     = amount - charges - discount;
+            const pmtDate   = document.getElementById('pmtDate').value;
+            const received  = parseFloat(document.getElementById('pmtAmount').value) || 0;
+            const exRate    = parseFloat(document.getElementById('pmtExRate').value) || config.exchangeRate;
+            const charges   = parseFloat(document.getElementById('pmtBankCharges').value) || 0;
+            const discount  = parseFloat(document.getElementById('pmtDiscount').value) || 0;
+            const pmtType   = document.getElementById('pmtType').value;
 
-            if (amount <= 0) { alert('Please enter a payment amount!'); return; }
+            if (received <= 0) { alert('Please enter a payment amount!'); return; }
 
-            // Update amounts
-            invoice.receivedAmountUSD += netUSD;
-            invoice.pendingAmountUSD   = Math.max(0, invoice.invoiceAmountUSD - invoice.receivedAmountUSD);
+            // Cash received goes into receivedAmountUSD
+            // Bank charges + discount are written off — reduce pending without adding to received
+            const totalClosing         = Math.round((received + charges + discount) * 100) / 100;
+            invoice.receivedAmountUSD += received;
+            invoice.pendingAmountUSD   = Math.max(0, Math.round((invoice.invoiceAmountUSD - invoice.receivedAmountUSD - charges - discount) * 100) / 100);
 
-            // Build note line
-            let noteLine = pmtType + ': ' + formatCurrency(amount) + ' @ ₹' + exRate + ' on ' + formatDate(pmtDate);
-            if (charges > 0) noteLine += ' | Bank charges: -' + formatCurrency(charges);
-            if (discount > 0) noteLine += ' | Discount: -' + formatCurrency(discount);
-            noteLine += ' | Net: ' + formatCurrency(netUSD);
-            invoice.notes = (invoice.notes ? invoice.notes + '\n' : '') + noteLine;
+            // Build note
+            let note = pmtType + ': ' + formatCurrency(received) + ' @ ₹' + exRate + ' on ' + formatDate(pmtDate);
+            if (charges > 0) note += ' | Bank charges w/o: ' + formatCurrency(charges);
+            if (discount > 0) note += ' | Discount w/o: ' + formatCurrency(discount);
+            note += ' | Closed: ' + formatCurrency(totalClosing);
+            if (invoice.pendingAmountUSD <= 0) note += ' ✅ Invoice closed';
+            invoice.notes = (invoice.notes ? invoice.notes + '\n' : '') + note;
 
             localStorage.setItem('keipl_invoices_v4', JSON.stringify(invoices));
             document.getElementById('paymentModal').remove();
             updateDashboard();
-            alert('✅ Payment recorded!\n\n' + noteLine);
+
+            const msg = invoice.pendingAmountUSD <= 0
+                ? '✅ Invoice FULLY CLOSED!\n\n' + note
+                : '✅ Payment recorded. Balance remaining: ' + formatCurrency(invoice.pendingAmountUSD) + '\n\n' + note;
+            alert(msg);
         }
 
         // Delete invoice
