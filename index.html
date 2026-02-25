@@ -321,8 +321,15 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>ETA/Invoice Date *</label>
-                        <input type="date" id="etaDate" required onchange="calculateDueDate()">
+                        <label>BL Date (Bill of Lading) *</label>
+                        <input type="date" id="blDate" required onchange="calculateDueDate()">
+                        <small style="color:#666;font-size:0.8em;">Shipment departure date</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ETA Date *</label>
+                        <input type="date" id="etaDate" required>
+                        <small style="color:#666;font-size:0.8em;">Expected arrival date</small>
                     </div>
                     
                     <div class="form-group">
@@ -443,10 +450,12 @@ KEIPL-002&#9;XYZ Limited&#9;USA&#9;Black Galaxy&#9;10,000.00&#9;835,000.00&#9; -
                             <th>Inv Amount (₹)</th>
                             <th>Received ($)</th>
                             <th>Pending ($)</th>
+                            <th>BL Date</th>
                             <th>ETA Date</th>
                             <th>Due Date</th>
                             <th>Days</th>
                             <th>Status</th>
+                            <th>Notes</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -785,12 +794,12 @@ KEIPL-002&#9;XYZ Limited&#9;USA&#9;Black Galaxy&#9;10,000.00&#9;835,000.00&#9; -
 
         // Calculate due date
         function calculateDueDate() {
-            const etaDate = document.getElementById('etaDate').value;
+            const blDate = document.getElementById('blDate').value;
             const terms = parseInt(document.getElementById('paymentTerms').value) || 0;
             
-            if (etaDate) {
-                const eta = new Date(etaDate);
-                const due = new Date(eta);
+            if (blDate) {
+                const bl = new Date(blDate);
+                const due = new Date(bl);
                 due.setDate(due.getDate() + terms);
                 document.getElementById('dueDate').value = due.toISOString().split('T')[0];
             }
@@ -826,6 +835,7 @@ KEIPL-002&#9;XYZ Limited&#9;USA&#9;Black Galaxy&#9;10,000.00&#9;835,000.00&#9; -
                 invoiceAmountINR: parseFloat(document.getElementById('invoiceAmountINR').value),
                 receivedAmountUSD: receivedAmountUSD,
                 pendingAmountUSD: invoiceAmountUSD - receivedAmountUSD,
+                blDate: document.getElementById('blDate').value,
                 etaDate: document.getElementById('etaDate').value,
                 paymentTerms: parseInt(document.getElementById('paymentTerms').value),
                 dueDate: document.getElementById('dueDate').value,
@@ -869,6 +879,7 @@ KEIPL-002&#9;XYZ Limited&#9;USA&#9;Black Galaxy&#9;10,000.00&#9;835,000.00&#9; -
             document.getElementById('exchangeRate').value = invoice.exchangeRate;
             document.getElementById('invoiceAmountINR').value = invoice.invoiceAmountINR;
             document.getElementById('receivedAmountUSD').value = invoice.receivedAmountUSD;
+            document.getElementById('blDate').value = invoice.blDate || invoice.etaDate || '';
             document.getElementById('etaDate').value = invoice.etaDate;
             document.getElementById('paymentTerms').value = invoice.paymentTerms;
             document.getElementById('dueDate').value = invoice.dueDate;
@@ -1197,7 +1208,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             const today = new Date();
 
             if (invoices.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 40px;">No invoices yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; padding: 40px;">No invoices yet</td></tr>';
                 return;
             }
 
@@ -1213,7 +1224,8 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
 
             tbody.innerHTML = invoices.map(inv => {
                 const status = getInvoiceStatus(inv);
-                const daysOutstanding = daysBetween(new Date(inv.dueDate), today);
+                const blDate = inv.blDate || inv.etaDate;
+                const daysFromBL = daysBetween(new Date(blDate), today);
                 
                 let statusBadge = '';
                 if (status === 'received') statusBadge = '<span class="status-badge status-received">Received</span>';
@@ -1233,9 +1245,10 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         <td style="text-align: right;">${formatCurrency(inv.invoiceAmountINR, 'INR')}</td>
                         <td style="text-align: right; color: #28a745;">${formatCurrency(inv.receivedAmountUSD)}</td>
                         <td style="text-align: right; color: ${inv.pendingAmountUSD > 0 ? '#dc3545' : '#6c757d'};">${formatCurrency(inv.pendingAmountUSD)}</td>
+                        <td>${formatDate(blDate)}</td>
                         <td>${formatDate(inv.etaDate)}</td>
                         <td>${formatDate(inv.dueDate)}</td>
-                        <td><strong>${Math.abs(daysOutstanding)}</strong></td>
+                        <td><strong>${Math.abs(daysFromBL)}</strong></td>
                         <td>${statusBadge}</td>
                         <td style="text-align: center;">${notesIcon}</td>
                         <td style="white-space: nowrap;">
@@ -2057,7 +2070,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             if (!customer) { alert('Please select a customer!'); return; }
 
             const customerInvoices = invoices.filter(inv => inv.customerName === customer)
-                .sort((a, b) => new Date(a.etaDate) - new Date(b.etaDate));
+                .sort((a, b) => new Date(a.blDate || a.etaDate) - new Date(b.blDate || b.etaDate));
             const totalInvoiced = customerInvoices.reduce((s, i) => s + i.invoiceAmountUSD, 0);
             const totalReceived = customerInvoices.reduce((s, i) => s + i.receivedAmountUSD, 0);
             const totalPending  = customerInvoices.reduce((s, i) => s + i.pendingAmountUSD, 0);
@@ -2071,7 +2084,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             // Soft colour palette per row — overdue & paid override
             const palette = ['#ffffff','#eef3ff','#fff8ee','#eefff4','#fff0f8','#f5eeff','#fffbee','#eefbff'];
 
-            // Build print rows — 10 columns including Material & Days Overdue
+            // Build print rows — 10 columns including Material & Days from BL
             let rows = '';
             customerInvoices.forEach((inv, i) => {
                 const status = getInvoiceStatus(inv);
@@ -2082,11 +2095,12 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 else if (status === 'partial')  { statusText = 'Partial'; statusColor = '#e67e00'; }
                 else                            { statusText = 'Not Due'; statusColor = '#0d8ecf'; }
 
-                const dueMs   = new Date(inv.dueDate).setHours(0,0,0,0);
-                const diffDay = Math.round((todayMs - dueMs) / 86400000);
+                const blDate  = inv.blDate || inv.etaDate;
+                const blMs    = new Date(blDate).setHours(0,0,0,0);
+                const diffDay = Math.round((todayMs - blMs) / 86400000);
                 const daysCol = status === 'overdue'
                     ? '<strong style="color:#dc3545;">' + diffDay + ' days</strong>'
-                    : (status === 'received' ? '—' : (diffDay < 0 ? 'Due in ' + Math.abs(diffDay) + 'd' : '—'));
+                    : (status === 'received' ? '—' : (diffDay < 0 ? 'In ' + Math.abs(diffDay) + 'd' : diffDay + ' days'));
 
                 const material  = (inv.material  || '—').substring(0, 22);
                 const container = inv.containerNo || '—';
@@ -2097,7 +2111,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                     '<tr style="background:' + rowBg + ';border-bottom:1px solid #e0e0e0;">' +
                         '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;font-weight:700;">' + inv.invoiceNumber + '</td>' +
                         '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;">' + material + '</td>' +
-                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;">' + formatDate(inv.etaDate) + '</td>' +
+                        '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7pt;">' + formatDate(blDate) + '</td>' +
                         '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;text-align:right;">' + formatCurrency(inv.invoiceAmountUSD) + '</td>' +
                         '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;text-align:right;color:#28a745;">' + formatCurrency(inv.receivedAmountUSD) + '</td>' +
                         '<td style="padding:4px 3px;border:1px solid #ddd;font-size:7.5pt;text-align:right;font-weight:700;color:' + (inv.pendingAmountUSD > 0 ? '#dc3545' : '#28a745') + ';">' + formatCurrency(inv.pendingAmountUSD) + '</td>' +
@@ -2159,7 +2173,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         '<tr style="background:#2a5298;color:white;">' +
                             '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;">Invoice</th>' +
                             '<th style="padding:5px 3px;border:1px solid #1e3c72;width:13%;">Material</th>' +
-                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:8%;">Date</th>' +
+                            '<th style="padding:5px 3px;border:1px solid #1e3c72;width:8%;">BL Date</th>' +
                             '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;text-align:right;">Amount</th>' +
                             '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;text-align:right;">Received</th>' +
                             '<th style="padding:5px 3px;border:1px solid #1e3c72;width:11%;text-align:right;">Balance</th>' +
@@ -2199,7 +2213,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                     '<thead><tr style="background:#2a5298;color:white;">' +
                         '<th style="padding:6px 4px;border:1px solid #1e3c72;">Invoice</th>' +
                         '<th style="padding:6px 4px;border:1px solid #1e3c72;">Material</th>' +
-                        '<th style="padding:6px 4px;border:1px solid #1e3c72;">Date</th>' +
+                        '<th style="padding:6px 4px;border:1px solid #1e3c72;">BL Date</th>' +
                         '<th style="padding:6px 4px;border:1px solid #1e3c72;text-align:right;">Amount</th>' +
                         '<th style="padding:6px 4px;border:1px solid #1e3c72;text-align:right;">Balance</th>' +
                         '<th style="padding:6px 4px;border:1px solid #1e3c72;text-align:center;">Days</th>' +
@@ -2211,14 +2225,15 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         if (st === 'received') { sc = '#28a745'; stxt = 'Paid';    rbg = '#edfff3'; }
                         else if (st === 'overdue') { sc = '#dc3545'; stxt = 'Overdue'; rbg = '#fff3f3'; }
                         else if (st === 'partial') { sc = '#e67e00'; stxt = 'Partial'; }
-                        const dueMs2  = new Date(inv.dueDate).setHours(0,0,0,0);
-                        const diff2   = Math.round((todayMs - dueMs2) / 86400000);
-                        const daysTxt = st === 'overdue' ? diff2 + ' days' : (st === 'received' ? '—' : (diff2 < 0 ? 'In ' + Math.abs(diff2) + 'd' : '—'));
+                        const blDate2 = inv.blDate || inv.etaDate;
+                        const blMs2   = new Date(blDate2).setHours(0,0,0,0);
+                        const diff2   = Math.round((todayMs - blMs2) / 86400000);
+                        const daysTxt = st === 'overdue' ? diff2 + ' days' : (st === 'received' ? '—' : (diff2 < 0 ? 'In ' + Math.abs(diff2) + 'd' : diff2 + ' days'));
                         const daysClr = st === 'overdue' ? '#dc3545' : (diff2 < 0 ? '#0d8ecf' : '#555');
                         return '<tr style="background:' + rbg + ';">' +
                             '<td style="padding:4px;border:1px solid #ddd;font-weight:700;">' + inv.invoiceNumber + '</td>' +
                             '<td style="padding:4px;border:1px solid #ddd;">' + (inv.material || '—') + '</td>' +
-                            '<td style="padding:4px;border:1px solid #ddd;">' + formatDate(inv.etaDate) + '</td>' +
+                            '<td style="padding:4px;border:1px solid #ddd;">' + formatDate(blDate2) + '</td>' +
                             '<td style="padding:4px;border:1px solid #ddd;text-align:right;">' + formatCurrency(inv.invoiceAmountUSD) + '</td>' +
                             '<td style="padding:4px;border:1px solid #ddd;text-align:right;font-weight:700;color:' + (inv.pendingAmountUSD > 0 ? '#dc3545' : '#28a745') + ';">' + formatCurrency(inv.pendingAmountUSD) + '</td>' +
                             '<td style="padding:4px;border:1px solid #ddd;text-align:center;color:' + daysClr + ';font-weight:600;">' + daysTxt + '</td>' +
