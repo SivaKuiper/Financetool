@@ -1225,18 +1225,24 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             tbody.innerHTML = invoices.map(inv => {
                 const status = getInvoiceStatus(inv);
                 const blDate = inv.blDate || inv.etaDate;
-                const daysFromBL = daysBetween(new Date(blDate), today);
                 
-                // For overdue invoices, show days overdue from due date
-                // For others, show days since BL
+                // Calculate days display based on status
                 let daysDisplay;
                 if (status === 'overdue') {
+                    // Show days past due date
                     const daysOverdue = daysBetween(new Date(inv.dueDate), today);
                     daysDisplay = Math.abs(daysOverdue);
                 } else if (status === 'received') {
+                    // Paid invoices show —
                     daysDisplay = '—';
                 } else {
-                    daysDisplay = Math.abs(daysFromBL);
+                    // Not due / pending / partial: show days until due
+                    const daysToDue = daysBetween(today, new Date(inv.dueDate));
+                    if (daysToDue > 0) {
+                        daysDisplay = daysToDue + ' left';
+                    } else {
+                        daysDisplay = 'Due today';
+                    }
                 }
                 
                 let statusBadge = '';
@@ -2108,20 +2114,26 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 else                            { statusText = 'Not Due'; statusColor = '#0d8ecf'; }
 
                 const blDate  = inv.blDate || inv.etaDate;
-                const blMs    = new Date(blDate).setHours(0,0,0,0);
                 const dueMs   = new Date(inv.dueDate).setHours(0,0,0,0);
                 
-                // For overdue: show days past due date
-                // For not due/paid: show days since BL
+                // Calculate days display based on status
                 let diffDay, daysCol;
                 if (status === 'overdue') {
+                    // Show days past due date
                     diffDay = Math.round((todayMs - dueMs) / 86400000);
                     daysCol = '<strong style="color:#dc3545;">' + diffDay + ' days</strong>';
                 } else if (status === 'received') {
                     daysCol = '—';
                 } else {
-                    diffDay = Math.round((todayMs - blMs) / 86400000);
-                    daysCol = diffDay < 0 ? 'In ' + Math.abs(diffDay) + 'd' : diffDay + ' days';
+                    // Not due: show days until due
+                    diffDay = Math.round((dueMs - todayMs) / 86400000);
+                    if (diffDay > 0) {
+                        daysCol = '<span style="color:#0d8ecf;">' + diffDay + ' left</span>';
+                    } else if (diffDay === 0) {
+                        daysCol = '<span style="color:#e67e00;">Due today</span>';
+                    } else {
+                        daysCol = '<span style="color:#dc3545;">Overdue</span>';
+                    }
                 }
 
                 const material  = (inv.material  || '—').substring(0, 22);
@@ -2247,12 +2259,11 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         if (st === 'received') { sc = '#28a745'; stxt = 'Paid';    rbg = '#edfff3'; }
                         else if (st === 'overdue') { sc = '#dc3545'; stxt = 'Overdue'; rbg = '#fff3f3'; }
                         else if (st === 'partial') { sc = '#e67e00'; stxt = 'Partial'; }
-                        const blDate2 = inv.blDate || inv.etaDate;
-                        const blMs2   = new Date(blDate2).setHours(0,0,0,0);
                         const dueMs2  = new Date(inv.dueDate).setHours(0,0,0,0);
                         
                         let diff2, daysTxt, daysClr;
                         if (st === 'overdue') {
+                            // Days past due
                             diff2   = Math.round((todayMs - dueMs2) / 86400000);
                             daysTxt = diff2 + ' days';
                             daysClr = '#dc3545';
@@ -2260,9 +2271,18 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                             daysTxt = '—';
                             daysClr = '#555';
                         } else {
-                            diff2   = Math.round((todayMs - blMs2) / 86400000);
-                            daysTxt = diff2 < 0 ? 'In ' + Math.abs(diff2) + 'd' : diff2 + ' days';
-                            daysClr = diff2 < 0 ? '#0d8ecf' : '#555';
+                            // Days until due
+                            diff2   = Math.round((dueMs2 - todayMs) / 86400000);
+                            if (diff2 > 0) {
+                                daysTxt = diff2 + ' left';
+                                daysClr = '#0d8ecf';
+                            } else if (diff2 === 0) {
+                                daysTxt = 'Today';
+                                daysClr = '#e67e00';
+                            } else {
+                                daysTxt = 'Overdue';
+                                daysClr = '#dc3545';
+                            }
                         }
                         return '<tr style="background:' + rbg + ';">' +
                             '<td style="padding:4px;border:1px solid #ddd;font-weight:700;">' + inv.invoiceNumber + '</td>' +
