@@ -1227,6 +1227,18 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 const blDate = inv.blDate || inv.etaDate;
                 const daysFromBL = daysBetween(new Date(blDate), today);
                 
+                // For overdue invoices, show days overdue from due date
+                // For others, show days since BL
+                let daysDisplay;
+                if (status === 'overdue') {
+                    const daysOverdue = daysBetween(new Date(inv.dueDate), today);
+                    daysDisplay = Math.abs(daysOverdue);
+                } else if (status === 'received') {
+                    daysDisplay = '—';
+                } else {
+                    daysDisplay = Math.abs(daysFromBL);
+                }
+                
                 let statusBadge = '';
                 if (status === 'received') statusBadge = '<span class="status-badge status-received">Received</span>';
                 else if (status === 'partial') statusBadge = '<span class="status-badge status-partial">Partial</span>';
@@ -1248,7 +1260,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         <td>${formatDate(blDate)}</td>
                         <td>${formatDate(inv.etaDate)}</td>
                         <td>${formatDate(inv.dueDate)}</td>
-                        <td><strong>${Math.abs(daysFromBL)}</strong></td>
+                        <td><strong>${daysDisplay}</strong></td>
                         <td>${statusBadge}</td>
                         <td style="text-align: center;">${notesIcon}</td>
                         <td style="white-space: nowrap;">
@@ -2097,10 +2109,20 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
 
                 const blDate  = inv.blDate || inv.etaDate;
                 const blMs    = new Date(blDate).setHours(0,0,0,0);
-                const diffDay = Math.round((todayMs - blMs) / 86400000);
-                const daysCol = status === 'overdue'
-                    ? '<strong style="color:#dc3545;">' + diffDay + ' days</strong>'
-                    : (status === 'received' ? '—' : (diffDay < 0 ? 'In ' + Math.abs(diffDay) + 'd' : diffDay + ' days'));
+                const dueMs   = new Date(inv.dueDate).setHours(0,0,0,0);
+                
+                // For overdue: show days past due date
+                // For not due/paid: show days since BL
+                let diffDay, daysCol;
+                if (status === 'overdue') {
+                    diffDay = Math.round((todayMs - dueMs) / 86400000);
+                    daysCol = '<strong style="color:#dc3545;">' + diffDay + ' days</strong>';
+                } else if (status === 'received') {
+                    daysCol = '—';
+                } else {
+                    diffDay = Math.round((todayMs - blMs) / 86400000);
+                    daysCol = diffDay < 0 ? 'In ' + Math.abs(diffDay) + 'd' : diffDay + ' days';
+                }
 
                 const material  = (inv.material  || '—').substring(0, 22);
                 const container = inv.containerNo || '—';
@@ -2227,9 +2249,21 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         else if (st === 'partial') { sc = '#e67e00'; stxt = 'Partial'; }
                         const blDate2 = inv.blDate || inv.etaDate;
                         const blMs2   = new Date(blDate2).setHours(0,0,0,0);
-                        const diff2   = Math.round((todayMs - blMs2) / 86400000);
-                        const daysTxt = st === 'overdue' ? diff2 + ' days' : (st === 'received' ? '—' : (diff2 < 0 ? 'In ' + Math.abs(diff2) + 'd' : diff2 + ' days'));
-                        const daysClr = st === 'overdue' ? '#dc3545' : (diff2 < 0 ? '#0d8ecf' : '#555');
+                        const dueMs2  = new Date(inv.dueDate).setHours(0,0,0,0);
+                        
+                        let diff2, daysTxt, daysClr;
+                        if (st === 'overdue') {
+                            diff2   = Math.round((todayMs - dueMs2) / 86400000);
+                            daysTxt = diff2 + ' days';
+                            daysClr = '#dc3545';
+                        } else if (st === 'received') {
+                            daysTxt = '—';
+                            daysClr = '#555';
+                        } else {
+                            diff2   = Math.round((todayMs - blMs2) / 86400000);
+                            daysTxt = diff2 < 0 ? 'In ' + Math.abs(diff2) + 'd' : diff2 + ' days';
+                            daysClr = diff2 < 0 ? '#0d8ecf' : '#555';
+                        }
                         return '<tr style="background:' + rbg + ';">' +
                             '<td style="padding:4px;border:1px solid #ddd;font-weight:700;">' + inv.invoiceNumber + '</td>' +
                             '<td style="padding:4px;border:1px solid #ddd;">' + (inv.material || '—') + '</td>' +
