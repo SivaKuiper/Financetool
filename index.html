@@ -1599,21 +1599,36 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
         }
 
         // Export to Excel
-        document.getElementById('exportExcelBtn').addEventListener('click', function() {
-            let csv = 'Invoice Number,Customer,Country,Material,Invoice USD,Invoice INR,Received,Pending,ETA Date,Due Date,Status\n';
+      document.getElementById('exportExcelBtn').addEventListener('click', function() {
+            let csv = 'Invoice Number,Customer,Country,Material,Invoice USD,Invoice INR,Received,Pending,BL Date,ETA Date,Due Date,Days,Status,Notes\n';
             
+            const today = new Date();
             invoices.forEach(inv => {
                 const status = getInvoiceStatus(inv);
-                csv += `${inv.invoiceNumber},${inv.customerName},${inv.country || ''},${inv.material || ''},${inv.invoiceAmountUSD},${inv.invoiceAmountINR},${inv.receivedAmountUSD},${inv.pendingAmountUSD},${inv.etaDate},${inv.dueDate},${status}\n`;
+                let statusText = status === 'received' ? 'Paid' : (status === 'overdue' ? 'Overdue' : (status === 'partial' ? 'Partial' : 'Not Due'));
+                
+                const blDate = inv.blDate || inv.etaDate;
+                let daysText;
+                if (status === 'overdue') {
+                    const daysOverdue = daysBetween(new Date(inv.dueDate), today);
+                    daysText = Math.abs(daysOverdue);
+                } else if (status === 'received') {
+                    daysText = '-';
+                } else {
+                    const daysToDue = daysBetween(today, new Date(inv.dueDate));
+                    daysText = daysToDue > 0 ? daysToDue + ' left' : 'Due today';
+                }
+                
+                const notes = (inv.notes || '').replace(/\n/g, ' ').replace(/,/g, ';');
+                csv += `${inv.invoiceNumber},${inv.customerName},${inv.country || ''},${inv.material || ''},${inv.invoiceAmountUSD},${inv.invoiceAmountINR},${inv.receivedAmountUSD},${inv.pendingAmountUSD},${blDate},${inv.etaDate},${inv.dueDate},${daysText},${statusText},"${notes}"\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `KEIPL_Receivables_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = 'KEIPL_Receivables_' + new Date().toISOString().split('T')[0] + '.csv';
             a.click();
-            window.URL.revokeObjectURL(url);
         });
 
         // Reset data
@@ -2083,7 +2098,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
         }
 
         // Generate customer statement
-        function generateCustomerStatement() {
+     function generateCustomerStatement() {
             const customer = document.getElementById('customerSelect').value;
             if (!customer) { alert('Please select a customer!'); return; }
 
@@ -2099,10 +2114,8 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
             const compAddr      = config.companyAddress || 'Ongole, Andhra Pradesh, India';
             const compEmail     = config.companyEmail || '';
 
-            // Soft colour palette per row — overdue & paid override
             const palette = ['#ffffff','#eef3ff','#fff8ee','#eefff4','#fff0f8','#f5eeff','#fffbee','#eefbff'];
 
-            // Build print rows — 10 columns including Material & Days from BL
             let rows = '';
             customerInvoices.forEach((inv, i) => {
                 const status = getInvoiceStatus(inv);
@@ -2116,16 +2129,13 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 const blDate  = inv.blDate || inv.etaDate;
                 const dueMs   = new Date(inv.dueDate).setHours(0,0,0,0);
                 
-                // Calculate days display based on status
                 let diffDay, daysCol;
                 if (status === 'overdue') {
-                    // Show days past due date
                     diffDay = Math.round((todayMs - dueMs) / 86400000);
                     daysCol = '<strong style="color:#dc3545;">' + diffDay + ' days</strong>';
                 } else if (status === 'received') {
                     daysCol = '—';
                 } else {
-                    // Not due: show days until due
                     diffDay = Math.round((dueMs - todayMs) / 86400000);
                     if (diffDay > 0) {
                         daysCol = '<span style="color:#0d8ecf;">' + diffDay + ' left</span>';
@@ -2138,7 +2148,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
 
                 const material  = (inv.material  || '—').substring(0, 22);
                 const container = inv.containerNo || '—';
-                const notesRaw  = (inv.notes || '').split('\n')[0];   // first line only
+                const notesRaw  = (inv.notes || '').split('\n')[0];
                 const notes     = notesRaw.substring(0, 35) + (notesRaw.length > 35 ? '…' : '');
 
                 rows +=
@@ -2236,12 +2246,11 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 '</div>' +
                 '</body></html>';
 
-            // Preview inside modal
             const previewDiv = document.getElementById('customerStatementContent');
             previewDiv.innerHTML =
                 '<div style="background:#eef3ff;border:2px dashed #2a5298;padding:12px;border-radius:8px;text-align:center;margin-bottom:12px;">' +
                     '<p style="margin:0;font-size:0.9em;color:#2a5298;"><strong>✅ Statement ready — ' + customer + '</strong></p>' +
-                    '<p style="margin:4px 0 0 0;font-size:0.8em;color:#555;">The printed version includes: Material, Days Overdue, Container & Notes columns.</p>' +
+                    '<p style="margin:4px 0 0 0;font-size:0.8em;color:#555;">The printed version includes: Material, Days, Container & Notes columns.</p>' +
                 '</div>' +
                 '<table style="width:100%;border-collapse:collapse;font-size:8pt;">' +
                     '<thead><tr style="background:#2a5298;color:white;">' +
@@ -2259,11 +2268,10 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                         if (st === 'received') { sc = '#28a745'; stxt = 'Paid';    rbg = '#edfff3'; }
                         else if (st === 'overdue') { sc = '#dc3545'; stxt = 'Overdue'; rbg = '#fff3f3'; }
                         else if (st === 'partial') { sc = '#e67e00'; stxt = 'Partial'; }
-                        const dueMs2  = new Date(inv.dueDate).setHours(0,0,0,0);
                         
+                        const dueMs2  = new Date(inv.dueDate).setHours(0,0,0,0);
                         let diff2, daysTxt, daysClr;
                         if (st === 'overdue') {
-                            // Days past due
                             diff2   = Math.round((todayMs - dueMs2) / 86400000);
                             daysTxt = diff2 + ' days';
                             daysClr = '#dc3545';
@@ -2271,7 +2279,6 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                             daysTxt = '—';
                             daysClr = '#555';
                         } else {
-                            // Days until due
                             diff2   = Math.round((dueMs2 - todayMs) / 86400000);
                             if (diff2 > 0) {
                                 daysTxt = diff2 + ' left';
@@ -2284,6 +2291,8 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                                 daysClr = '#dc3545';
                             }
                         }
+                        
+                        const blDate2 = inv.blDate || inv.etaDate;
                         return '<tr style="background:' + rbg + ';">' +
                             '<td style="padding:4px;border:1px solid #ddd;font-weight:700;">' + inv.invoiceNumber + '</td>' +
                             '<td style="padding:4px;border:1px solid #ddd;">' + (inv.material || '—') + '</td>' +
@@ -2301,6 +2310,7 @@ KEIPL-003\t"AL RUKN RAQI MARBLES & GRANITES"\tWhite Marble\t15000\t1252500\t5000
                 '</div>';
 
             window._statementPrintHtml = printHtml;
+            document.getElementById('customerStatementModal').style.display = 'flex';
         }
 
         function openStatementPrint() {
